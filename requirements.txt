@@ -1,0 +1,10 @@
+entsoe-py
+pandas
+pyarrow
+lightgbm
+scikit-learn
+holidays
+anthropic
+python-dotenv
+matplotlib
+seaborn
