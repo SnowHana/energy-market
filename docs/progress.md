@@ -47,14 +47,89 @@ Day-Ahead prices : day before, every trader _bids_ for _next day_
 
 # Forecasting & Validation
 
-        Task: Forecast either next-day hourly prices (Option A, recommended) or front-week / front-month price averages (Option B).
-        Deliverable: At least one baseline and one improved model with validation metrics.
-    Prompt Curve Translation
-        Task: Translate your forecast into a tradable DA-to-curve view.
-        Deliverable: Short guidance on how the forecasted values would be used or invalidated.
-    AI/LLM Integration
-        Task: Implement one programmatic AI/LLM component to reduce manual work in your pipeline.
-        Deliverable: Working code calling the AI/LLM, logged prompts and outputs, and a brief explanation of its purpose.
+## Task: Forecast either next-day hourly prices (Option A, recommended) or front-week / front-month price averages (Option B).
+
+Takes clean data, builds inputs model can learn from.
+Engineering _signals_ helping model to understsand _patterns_.
+
+- Calendar features
+- Holiday flag
+- Lagged Prices : price at same hour yesterday, last week etc
+- Rollign stasts: 24h, 168h etc
+- Residual load : already good to go
+
+### build_features
+
+- `datetime` object to `hour, dayofweek, month`
+- Check `is_holiday` and `is_peak`
+- Check `price_lag` : Prices before 24hr, and 1week
+- Check `price_roll_mean` : Prices before 24hr
+
+> No look ahead bias!
+> Make sure to `.shift(1)` when finding `roll_mean` cuz otherwise, current price is included!
+
+## Deliverable: At least one baseline and one improved model with validation metrics.
+
+Part 2 — models.py
+What: Two models that predict tomorrow's 24 hourly prices.
+
+Baseline — Seasonal Naive:
+Just says "tomorrow's price at hour H = last week's price at hour H". Super simple, no training needed. This is our benchmark to beat.
+
+Improved — LightGBM:
+A gradient boosting model (like a smarter random forest). Takes all the features from features.py and learns complex patterns. Single model with hour-of-day as a feature — so it learns one model for all 24 hours simultaneously.
+
+Part 3 — validate.py
+What: Tests how good our models actually are.
+
+Walk-forward validation:
+We simulate real trading conditions. Train on everything up to week X, predict week X+1, then expand the training window and repeat. Never use future data to train — that would be cheating.
+
+Train: Jun 2024 → Sep 2026 → Predict: Oct 2026 week 1
+Train: Jun 2024 → Oct 2026 week 1 → Predict: Oct 2026 week 2
+...and so on for 10 weeks
+Metrics:
+
+MAE (Mean Absolute Error) — average €/MWh error. Lower is better.
+RMSE (Root Mean Square Error) — penalises big errors more. Lower is better.
+Skill score = 1 - MAE_model / MAE_naive. Positive = beats naive. 0 = same as naive. Negative = worse than naive.
+Outputs:
+
+outputs/metrics.json — all numbers
+outputs/figures/ — predicted vs actual plot, error distribution, feature importance
+outputs/submission.csv — your out-of-sample predictions
+
+### Implementation
+
+#### Metrics
+
+- **MAE (Mean absolute error)** : Avg. of absolute diff btw predicted and actual : Cuz easy to interpret (on avg, we are off by $x$ distance)
+- **RMSE (Root Mean Squared Error)** : Big mistakes get penalised more heavily. Catch models that are occasionally very wrong
+
+- **MAPE (Mean Absolute Percentage Error)** : Is not good, because it divdides by actual price, but German one goes negative!
+
+- **Skill Score** : https://en.wikipedia.org/wiki/Forecast_skill
+
+https://www.amperon.co/blog/the-different-kinds-of-forecasting-metrics
+
+https://medium.com/trusted-data-science-haleon/forecasting-navigating-metrics-validation-and-model-selection-881e8b7b76d2
+
+# Prompt Curve Translation
+
+Task: Translate your forecast into a tradable DA-to-curve view.
+Deliverable: Short guidance on how the forecasted values would be used or invalidated.
+
+---
+
+- Curve = Forward Prices (Contracts where you agree today to buy/sell electricity at a _fixed price_ for a _future period_)
+- Prompt Curve : nearest upcoming period (front-week = next week, front-month = next month)
+
+- DA-to-curve view : DA (Day-Ahead), so have a forecast for tmr's hourly price, aggregate into a single number (baseload avg / peak avg) to compare it what the forward market is currently pricing that period at....
+
+# AI/LLM Integration
+
+Task: Implement one programmatic AI/LLM component to reduce manual work in your pipeline.
+Deliverable: Working code calling the AI/LLM, logged prompts and outputs, and a brief explanation of its purpose.
 
 Submission:
 
