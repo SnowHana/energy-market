@@ -116,16 +116,6 @@ def write_report(signal: dict) -> None:
 - **Conviction** sizes the edge against the model's own error (signal-to-noise): spread < 1×MAE
   = LOW (inside our noise → treat as no-trade), 1–2× = MEDIUM, >2× = HIGH. The **z** column is the
   equivalent in std of forecast error (RMSE) — a spread inside ~1 std is not a tradeable edge.
-
-## Usage & invalidation guidance
-- Re-run **daily** — both forecast and reference roll forward each day.
-- The view holds while the period's **wind forecast** stays within its current band. A material
-  **upward wind revision** lowers residual load, pushes prices down, and **invalidates a LONG**
-  (and strengthens a SHORT); downward revisions do the reverse.
-- **Stop out** if realized day-ahead diverges from the forecast by more than ~1×MAE
-  ({signal['model_mae']} €/MWh) for **2 consecutive days** — the model is mis-calibrated to the
-  current regime (e.g. an unmodelled fuel or outage shock).
-- Treat **LOW** conviction as no-trade: the edge is inside the model's own error.
 """
     Path(OUTPUTS_DIR).mkdir(exist_ok=True)
     Path(f"{OUTPUTS_DIR}/curve_signal.md").write_text(report)
@@ -147,7 +137,9 @@ def backtest_signal(df: pd.DataFrame, mae: float) -> pd.DataFrame:
         forecast = predict_lgbm(model, test_df[FEATURE_COLS])
 
         fc_base, _ = baseload_peak(forecast)
-        ref_base, _ = baseload_peak(train_df["prices"].iloc[-(REFERENCE_WEEKS * PROMPT_HOURS):])
+        ref_base, _ = baseload_peak(
+            train_df["prices"].iloc[-(REFERENCE_WEEKS * PROMPT_HOURS) :]
+        )
         real_base, _ = baseload_peak(test_df["prices"])
 
         spread = fc_base - ref_base
@@ -158,16 +150,18 @@ def backtest_signal(df: pd.DataFrame, mae: float) -> pd.DataFrame:
         # Only book P&L for MEDIUM or HIGH conviction — LOW is no-trade
         pnl = round(sign * (real_base - ref_base), 2) if conviction != "LOW" else None
 
-        results.append({
-            "week_start": str(test_df.index[0])[:10],
-            "fc_base": fc_base,
-            "ref_base": ref_base,
-            "spread": round(spread, 2),
-            "signal": signal,
-            "conviction": conviction,
-            "realized_base": real_base,
-            "pnl": pnl,
-        })
+        results.append(
+            {
+                "week_start": str(test_df.index[0])[:10],
+                "fc_base": fc_base,
+                "ref_base": ref_base,
+                "spread": round(spread, 2),
+                "signal": signal,
+                "conviction": conviction,
+                "realized_base": real_base,
+                "pnl": pnl,
+            }
+        )
 
     result_df = pd.DataFrame(results)
 
@@ -191,17 +185,29 @@ def backtest_signal(df: pd.DataFrame, mae: float) -> pd.DataFrame:
 def _save_backtest_figure(result_df: pd.DataFrame) -> None:
     """Cumulative P&L chart for the backtest."""
     import os
+
     os.makedirs(f"{OUTPUTS_DIR}/figures", exist_ok=True)
 
     tradeable = result_df[result_df["pnl"].notna()].copy()
     tradeable["cumulative_pnl"] = tradeable["pnl"].cumsum()
 
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.bar(tradeable["week_start"], tradeable["pnl"],
-           color=["green" if p > 0 else "red" for p in tradeable["pnl"]], alpha=0.7, label="Weekly P&L")
+    ax.bar(
+        tradeable["week_start"],
+        tradeable["pnl"],
+        color=["green" if p > 0 else "red" for p in tradeable["pnl"]],
+        alpha=0.7,
+        label="Weekly P&L",
+    )
     ax2 = ax.twinx()
-    ax2.plot(tradeable["week_start"], tradeable["cumulative_pnl"],
-             color="black", linewidth=2, marker="o", label="Cumulative P&L")
+    ax2.plot(
+        tradeable["week_start"],
+        tradeable["cumulative_pnl"],
+        color="black",
+        linewidth=2,
+        marker="o",
+        label="Cumulative P&L",
+    )
     ax2.axhline(0, color="black", linewidth=0.5, linestyle="--")
     ax.set_xlabel("Week start")
     ax.set_ylabel("Weekly P&L (€/MWh)")
