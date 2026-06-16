@@ -8,3 +8,5 @@ anthropic
 python-dotenv
 matplotlib
 seaborn
+google-genai
+tabulate

@@ -38,13 +38,15 @@ def run():
     non_24 = daily_hours[daily_hours != 24]
 
     # Coverage table
-    coverage = pd.DataFrame({
-        "start": df.apply(lambda col: col.first_valid_index()),
-        "end": df.apply(lambda col: col.last_valid_index()),
-        "total_rows": len(df),
-        "non_null": df.count(),
-        "pct_complete": (df.count() / len(df) * 100).round(2),
-    })
+    coverage = pd.DataFrame(
+        {
+            "start": df.apply(lambda col: col.first_valid_index()),
+            "end": df.apply(lambda col: col.last_valid_index()),
+            "total_rows": len(df),
+            "non_null": df.count(),
+            "pct_complete": (df.count() / len(df) * 100).round(2),
+        }
+    )
 
     report = f"""# QA Report — DE_LU Day-Ahead Power Data
 
@@ -56,9 +58,9 @@ def run():
 ## 1. Timestamp Completeness
 - Expected hours: {len(expected)}
 - Actual hours: {len(df)}
-- Missing hours: {len(missing)} ✓
-- Extra hours: {len(extra)} ✓
-- Duplicate timestamps: {duplicates} ✓
+- Missing hours: {len(missing)} 
+- Extra hours: {len(extra)}
+- Duplicate timestamps: {duplicates}
 
 ## 2. NaN Counts
 {nan_report.to_markdown()}
@@ -69,7 +71,7 @@ def run():
 - Mean: {prices.mean():.2f} €/MWh
 - Negative prices: {(prices < 0).sum()} hours
 - Extreme spikes (>500 €/MWh): {(prices > 500).sum()} hours
-- Flatlines (5h+): {flatline.sum()} ✓
+- Flatlines (5h+): {flatline.sum()}
 
 ## 4. DST Day-Length Check
 {non_24.to_markdown()}
@@ -80,7 +82,7 @@ def run():
 ## 6. Notes
 - `actual_gen` is 50% complete — 2025 data timed out during API pull (504 error).
   This column is used for evaluation only, never as a model feature, so this does not affect forecast quality.
-- Negative prices ({(prices < 0).sum()} hours, {(prices < 0).mean()*100:.1f}%) are valid — Germany frequently sees negative prices during high renewable output periods.
+- Negative prices ({(prices < 0).sum()} hours, {(prices < 0).mean()*100:.1f}%) are valid
 - Extreme spikes ({(prices > 500).sum()} hours >500 €/MWh) are real market events, not data errors.
 - DST transition days correctly show 23h/25h — Europe/Berlin timezone handled correctly.
 """
