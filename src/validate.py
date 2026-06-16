@@ -29,14 +29,7 @@ def compute_metrics(y_true: pd.Series, y_pred: pd.Series, label: str) -> dict:
 
 
 def walk_forward(df: pd.DataFrame) -> dict:
-    """
-    Expanding-window walk-forward validation.
-    For each week in the test period:
-      - train on all data up to that week
-      - predict that week only
-      - expand training window by one week and repeat
-    Final metrics are computed over all accumulated predictions.
-    """
+    """Expanding-window walk-forward: train up to week w, predict week w, retrain, repeat."""
     week_hours = 7 * 24
 
     all_lgbm_preds = []

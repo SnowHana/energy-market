@@ -20,8 +20,8 @@ pip install -r requirements.txt
 # 3. Configure secrets
 cp .env.example .env
 # Then open .env and fill in:
-#   ENTSOE_API_TOKEN=<your ENTSO-E token>
-#   GEMINI_API_KEY=<your Google AI Studio key>
+#   ENTSOE_API_TOKEN=  ← your ENTSO-E token
+#   GEMINI_API_KEY=    ← your Google AI Studio key
 ```
 
 **Getting API keys:**
@@ -66,8 +66,7 @@ cobblestone_study/
 │   ├── curve.py             # hourly forecast → baseload/peak signal
 │   └── llm_note.py          # LLM daily trader note
 ├── docs/
-│   ├── writeup.md           # 1–3 page method + results write-up
-│   └── TODO.md
+│   └── writeup.md           # 1–3 page method + results write-up
 └── outputs/                 # generated files (gitignored)
 ```
 
