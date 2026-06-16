@@ -93,16 +93,7 @@ def save_submission(y_test: pd.Series, lgbm_preds: pd.Series) -> None:
     print(f"Saved {OUTPUTS_DIR}/submission.csv")
 
 
-def save_figures(results: dict) -> None:
-    figures_dir = Path(f"{OUTPUTS_DIR}/figures")
-    figures_dir.mkdir(parents=True, exist_ok=True)
-
-    y_test = results["y_test"]
-    lgbm_preds = results["lgbm_preds"]
-    base_preds = results["base_preds"]
-    model = results["model"]
-
-    # Predicted vs actual
+def _plot_predicted_vs_actual(y_test, lgbm_preds, base_preds, path):
     fig, ax = plt.subplots(figsize=(14, 4))
     ax.plot(y_test.index, y_test.values, label="Actual", alpha=0.8)
     ax.plot(y_test.index, lgbm_preds.values, label="LightGBM", alpha=0.7)
@@ -111,10 +102,11 @@ def save_figures(results: dict) -> None:
     ax.set_ylabel("€/MWh")
     ax.legend()
     fig.tight_layout()
-    fig.savefig(f"{figures_dir}/predicted_vs_actual.png", dpi=150)
+    fig.savefig(path, dpi=150)
     plt.close()
 
-    # Error distribution
+
+def _plot_error_distribution(y_test, lgbm_preds, path):
     errors = lgbm_preds.values - y_test.values
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.hist(errors, bins=50, edgecolor="black")
@@ -122,10 +114,11 @@ def save_figures(results: dict) -> None:
     ax.set_xlabel("Prediction Error (€/MWh)")
     ax.set_ylabel("Count")
     fig.tight_layout()
-    fig.savefig(f"{figures_dir}/error_distribution.png", dpi=150)
+    fig.savefig(path, dpi=150)
     plt.close()
 
-    # Feature importance
+
+def _plot_feature_importance(model, path):
     importance = pd.Series(
         model.feature_importances_, index=FEATURE_COLS
     ).sort_values(ascending=True)
@@ -134,10 +127,11 @@ def save_figures(results: dict) -> None:
     ax.set_title("LightGBM Feature Importance")
     ax.set_xlabel("Importance")
     fig.tight_layout()
-    fig.savefig(f"{figures_dir}/feature_importance.png", dpi=150)
+    fig.savefig(path, dpi=150)
     plt.close()
 
-    # MAE by hour of day
+
+def _plot_mae_by_hour(y_test, lgbm_preds, path):
     hourly_mae = (
         pd.DataFrame({"actual": y_test, "pred": lgbm_preds})
         .assign(error=lambda x: (x["pred"] - x["actual"]).abs())
@@ -152,8 +146,21 @@ def save_figures(results: dict) -> None:
     ax.axvspan(7.5, 19.5, alpha=0.1, color="orange", label="Peak hours")
     ax.legend()
     fig.tight_layout()
-    fig.savefig(f"{figures_dir}/mae_by_hour.png", dpi=150)
+    fig.savefig(path, dpi=150)
     plt.close()
+
+
+def save_figures(results: dict) -> None:
+    figures_dir = Path(f"{OUTPUTS_DIR}/figures")
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    y_test = results["y_test"]
+    lgbm_preds = results["lgbm_preds"]
+
+    _plot_predicted_vs_actual(y_test, lgbm_preds, results["base_preds"], f"{figures_dir}/predicted_vs_actual.png")
+    _plot_error_distribution(y_test, lgbm_preds, f"{figures_dir}/error_distribution.png")
+    _plot_feature_importance(results["model"], f"{figures_dir}/feature_importance.png")
+    _plot_mae_by_hour(y_test, lgbm_preds, f"{figures_dir}/mae_by_hour.png")
 
     print(f"Saved figures to {figures_dir}/")
 

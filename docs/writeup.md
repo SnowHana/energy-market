@@ -72,6 +72,8 @@ Validation is a 10-week expanding walk-forward: train up to a week, predict it, 
 
 LightGBM cuts the naive error by 59% and gets the direction right 90% of the time.
 The biggest features are lagged price, residual load and hour-of-day, which is what I'd expect.
+Skill metric represents _associated skill score_ from https://en.wikipedia.org/wiki/Forecast_skill.
+
 Where it struggles is the evening ramp (18–21h) and the spike / negative hours — the handful of moments that drive most of the
 total error.
 Figures in `outputs/figures/`.
@@ -112,8 +114,7 @@ long, plus a 2-day stop-out) are in `outputs/curve_signal.md`.
 ## 5. LLM Integration
 
 `src/llm_note.py` feeds the curve signal plus a couple of supporting numbers (avg residual load, top
-spike hours) to Gemini at `temperature=0.2` and gets back a structured daily fair-value note as JSON. I
-validate the JSON shape before saving, so a malformed response errors out instead of being saved quietly.
+spike hours) to Gemini at `temperature=0.2` and gets back a structured daily fair-value note as JSON.
 Every call is logged to `outputs/llm_logs.jsonl`; an example note is in `outputs/trader_note_example.md`.
 
 The LLM only does the wording, not the decision — the prompt forbids it from inventing numbers, and the
@@ -123,6 +124,6 @@ of writing up the morning narrative every day.
 ## 6. Limitations & Next Steps
 
 The honest gaps: the curve reference is a realized-price proxy, not true forwards; there are no gas,
-carbon or cross-border features (which is probably why the spike hours are the weakest); and the backtest
-sample is small. If I took this further I'd swap in EEX settlement prices, add a spike-specific model or
-quantile loss for the tail hours, and bring in cross-border flows.
+carbon or cross-border features (which is probably why the spike hours are the weakest);
+and the backtest sample is small.
+If I took this further I'd swap in EEX settlement prices, add a spike-specific model and bring in cross-border flows.
