@@ -1,0 +1,15 @@
+{
+  "base": {
+    "model": "base",
+    "mae": 39.48,
+    "rmse": 63.64,
+    "directional_accuracy": 0.8529
+  },
+  "lgbm": {
+    "model": "lgbm",
+    "mae": 16.72,
+    "rmse": 28.72,
+    "directional_accuracy": 0.8922,
+    "skill": 0.5765
+  }
+}

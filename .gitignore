@@ -3,7 +3,6 @@ data/
 __pycache__/
 *.pyc
 .venv/
-outputs/
 *.parquet
 .ipynb_checkpoints/
 *.ipynb
@@ -11,3 +10,4 @@ CLAUDE.md
 docs/interview_prep.md
 docs/progress.md
 docs/TODO.md
+submission/
