@@ -70,12 +70,4 @@ cobblestone_study/
 └── outputs/                 # generated files (gitignored)
 ```
 
----
 
-## Key design decisions
-
-- **No look-ahead bias:** model features use only ENTSO-E _forecasts_ (load, wind, solar), not actuals. Rolling features use `shift(1)` before `.rolling()`.
-- **DST-safe:** all timestamps are tz-aware `Europe/Berlin`. Spring/autumn days with 23/25 hours are handled correctly.
-- **Walk-forward validation:** 10 expanding-window weekly retrains — no random CV.
-- **Conviction sizing:** spread / MAE. A spread inside 1×MAE is treated as noise (no-trade).
-- **Reproducibility:** `RANDOM_SEED = 42` in `config.py`; no secrets in the repo.
