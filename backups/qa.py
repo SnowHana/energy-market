@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
 
-from config import CLEAN_PARQUET, OUTPUTS_DIR
+from backups.config import CLEAN_PARQUET, OUTPUTS_DIR
 
 
 def run():

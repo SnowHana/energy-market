@@ -9,9 +9,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-from config import CLEAN_PARQUET, OUTPUTS_DIR, TEST_WEEKS, RANDOM_SEED
-from src.features import build_features, FEATURE_COLS
-from src.models import base_predict, train_lgbm, predict_lgbm
+from backups.config import CLEAN_PARQUET, OUTPUTS_DIR, TEST_WEEKS, RANDOM_SEED
+from backups.features import build_features, FEATURE_COLS
+from backups.models import base_predict, train_lgbm, predict_lgbm
 
 
 def compute_metrics(y_true: pd.Series, y_pred: pd.Series, label: str) -> dict:
@@ -40,7 +40,7 @@ def walk_forward(df: pd.DataFrame) -> dict:
     for week in range(TEST_WEEKS, 0, -1):
         cutoff = len(df) - week * week_hours
         train_df = df.iloc[:cutoff]
-        test_df = df.iloc[cutoff: cutoff + week_hours]
+        test_df = df.iloc[cutoff : cutoff + week_hours]
 
         X_train = train_df[FEATURE_COLS]
         y_train = train_df["prices"]
@@ -119,9 +119,9 @@ def _plot_error_distribution(y_test, lgbm_preds, path):
 
 
 def _plot_feature_importance(model, path):
-    importance = pd.Series(
-        model.feature_importances_, index=FEATURE_COLS
-    ).sort_values(ascending=True)
+    importance = pd.Series(model.feature_importances_, index=FEATURE_COLS).sort_values(
+        ascending=True
+    )
     fig, ax = plt.subplots(figsize=(8, 6))
     importance.plot(kind="barh", ax=ax)
     ax.set_title("LightGBM Feature Importance")
@@ -157,8 +157,15 @@ def save_figures(results: dict) -> None:
     y_test = results["y_test"]
     lgbm_preds = results["lgbm_preds"]
 
-    _plot_predicted_vs_actual(y_test, lgbm_preds, results["base_preds"], f"{figures_dir}/predicted_vs_actual.png")
-    _plot_error_distribution(y_test, lgbm_preds, f"{figures_dir}/error_distribution.png")
+    _plot_predicted_vs_actual(
+        y_test,
+        lgbm_preds,
+        results["base_preds"],
+        f"{figures_dir}/predicted_vs_actual.png",
+    )
+    _plot_error_distribution(
+        y_test, lgbm_preds, f"{figures_dir}/error_distribution.png"
+    )
     _plot_feature_importance(results["model"], f"{figures_dir}/feature_importance.png")
     _plot_mae_by_hour(y_test, lgbm_preds, f"{figures_dir}/mae_by_hour.png")
 
@@ -173,8 +180,12 @@ def run():
     results = walk_forward(df)
 
     print("\n--- Results ---")
-    print(f"Base     MAE: {results['base']['mae']} €/MWh  RMSE: {results['base']['rmse']}")
-    print(f"LightGBM MAE: {results['lgbm']['mae']} €/MWh  RMSE: {results['lgbm']['rmse']}")
+    print(
+        f"Base     MAE: {results['base']['mae']} €/MWh  RMSE: {results['base']['rmse']}"
+    )
+    print(
+        f"LightGBM MAE: {results['lgbm']['mae']} €/MWh  RMSE: {results['lgbm']['rmse']}"
+    )
     print(f"Skill score:  {results['lgbm']['skill']} (positive = beats naive)")
     print(f"Directional accuracy: {results['lgbm']['directional_accuracy']}")
 

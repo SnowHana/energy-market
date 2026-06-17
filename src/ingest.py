@@ -1,21 +1,18 @@
 import os
-import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import pandas as pd
-from entsoe import EntsoePandasClient
 from dotenv import load_dotenv
-
-from config import EIC, TIMEZONE, START_DATE, END_DATE, CLEAN_PARQUET, DATA_DIR
+from config import END_DATE, START_DATE, ZONE, TIME_ZONE, CLEAN_CSV, DATA_DIR
+from entsoe import EntsoePandasClient
+import pandas as pd
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-log = logging.getLogger(__name__)
 
 
+# try:
 def get_client():
     token = os.getenv("ENTSOE_API_TOKEN")
     if not token:
@@ -25,83 +22,47 @@ def get_client():
 
 def fetch_data():
     client = get_client()
-    start = pd.Timestamp(START_DATE, tz=TIMEZONE)
-    end = pd.Timestamp(END_DATE, tz=TIMEZONE)
+    start_date = pd.Timestamp(START_DATE, tz=TIME_ZONE)
+    end_date = pd.Timestamp(END_DATE, tz=TIME_ZONE)
 
-    log.info(f"Pulling DE_LU data: {start.date()} -> {end.date()}")
-
-    log.info("Fetching day-ahead prices...")
-    prices = client.query_day_ahead_prices(EIC, start=start, end=end)
-
-    log.info("Fetching load forecast...")
-    load_fc = client.query_load_forecast(EIC, start=start, end=end)
-
-    log.info("Fetching wind forecast...")
-    wind_fc = client.query_wind_and_solar_forecast(
-        EIC, start=start, end=end, psr_type="B19"
+    day_ahead_prices = client.query_day_ahead_prices(
+        country_code=ZONE, start=start_date, end=end_date
     )
 
-    log.info("Fetching solar forecast...")
-    solar_fc = client.query_wind_and_solar_forecast(
-        EIC, start=start, end=end, psr_type="B16"
+    net_position = client.query_net_position(
+        country_code=ZONE, start=start_date, end=end_date, dayahead=True
     )
 
-    log.info("Fetching actual load...")
-    actual_load = client.query_load(EIC, start=start, end=end)
+    load = client.query_load_forecast(country_code=ZONE, start=start_date, end=end_date)
 
-    # Actual Generation to evaluate model
-    log.info("Fetching actual generation (year by year)...")
-    gen_chunks = []
-    for year in range(start.year, end.year + 1):
-        y_start = max(start, pd.Timestamp(f"{year}-01-01", tz=TIMEZONE))
-        y_end = min(end, pd.Timestamp(f"{year}-12-31 23:59", tz=TIMEZONE))
-        try:
-            chunk = client.query_generation(EIC, start=y_start, end=y_end)
-            if isinstance(chunk, pd.DataFrame):
-                chunk = chunk.sum(axis=1)
-            gen_chunks.append(chunk)
-            log.info(f"  actual_gen {year} ok")
-        except Exception as e:
-            log.warning(f"  actual_gen {year} failed ({e}) — skipping")
-    actual_gen = pd.concat(gen_chunks) if gen_chunks else None
+    wind_forecast = client.query_wind_and_solar_forecast(
+        country_code=ZONE, start=start_date, end=end_date, psr_type="B19"
+    )
 
-    def to_series(x):
-        if isinstance(x, pd.DataFrame):
-            if x.shape[1] == 1:
-                return x.iloc[:, 0]
-            return x.sum(axis=1)
-        return x
+    solar_forecast = client.query_wind_and_solar_forecast(
+        country_code=ZONE, start=start_date, end=end_date, psr_type="B16"
+    )
 
-    prices = to_series(prices)
-    load_fc = to_series(load_fc)
-    wind_fc = to_series(wind_fc)
-    solar_fc = to_series(solar_fc)
-    actual_load = to_series(actual_load)
-
+    # Single-column DataFrame into a pandas series
     df = pd.DataFrame(
         {
-            "prices": prices,
-            "load_fc": load_fc,
-            "wind_fc": wind_fc,
-            "solar_fc": solar_fc,
-            "actual_load": actual_load,
+            "day_ahead_prices": day_ahead_prices,
+            "net_position": net_position,
+            "load_forecast": load.squeeze(),
+            "solar_forecast": solar_forecast.squeeze(),
+            "wind_forecast": wind_forecast.squeeze(),
         }
     )
-
-    if actual_gen is not None:
-        df["actual_gen"] = actual_gen
-    # Data is given in every 15min, resample hourly
-    df = df.resample("h").mean()
-    # load created by non-renewables
-    df["residual_load_fc"] = df["load_fc"] - df["wind_fc"] - df["solar_fc"]
+    df["residual_load_forecast"] = (
+        df["load_forecast"] - df["wind_forecast"] - df["solar_forecast"]
+    )
 
     return df
 
 
 def save_clean(df):
     Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
-    df.to_parquet(CLEAN_PARQUET)
-    log.info(f"Saved {CLEAN_PARQUET}  shape={df.shape}")
+    df.to_csv(CLEAN_CSV)
 
 
 def run():

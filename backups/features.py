@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import pandas as pd
 import holidays
 
-from config import CLEAN_PARQUET, PEAK_HOURS, PEAK_WEEKDAYS
+from backups.config import CLEAN_PARQUET, PEAK_HOURS, PEAK_WEEKDAYS
 
 FEATURE_COLS = [
     "load_fc",

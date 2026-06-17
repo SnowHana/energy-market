@@ -11,8 +11,8 @@ import pandas as pd
 from dotenv import load_dotenv
 from google import genai
 
-from config import CLEAN_PARQUET, OUTPUTS_DIR
-from src.curve import build_signal
+from backups.config import CLEAN_PARQUET, OUTPUTS_DIR
+from backups.curve import build_signal
 
 load_dotenv()
 
@@ -26,7 +26,7 @@ def gather_inputs() -> dict:
     df = pd.read_parquet(CLEAN_PARQUET)
     signal = build_signal(df)
 
-    prompt_window = df.iloc[-(7 * 24):]
+    prompt_window = df.iloc[-(7 * 24) :]
     avg_residual = round(prompt_window["residual_load_fc"].mean(), 0)
     spike = prompt_window["prices"].groupby(prompt_window.index.hour).mean().nlargest(3)
     spike_hours = [f"{h:02d}:00 (~{p:.0f} €/MWh)" for h, p in spike.items()]
@@ -130,9 +130,9 @@ def run():
     prompt = build_prompt(inputs)
 
     raw = call_llm(prompt)
-    log_call(prompt, raw)          # log every call, even before validation
+    log_call(prompt, raw)  # log every call, even before validation
 
-    note = validate_note(raw)      # raises if shape is wrong
+    note = validate_note(raw)  # raises if shape is wrong
     save_example(note, inputs["signal"])
 
     print("\n--- Trader Note ---")

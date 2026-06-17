@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
 import lightgbm as lgb
-from config import LGBM_PARAMS
+from backups.config import LGBM_PARAMS
 
 
 def base_predict(df: pd.DataFrame) -> pd.Series:
