@@ -53,6 +53,9 @@ def fetch_data():
             "wind_forecast": wind_forecast.squeeze(),
         }
     )
+
+    df = df.resample("h").mean()
+
     df["residual_load_forecast"] = (
         df["load_forecast"] - df["wind_forecast"] - df["solar_forecast"]
     )
